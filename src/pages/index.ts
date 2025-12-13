@@ -1,0 +1,12 @@
+export * from './Dashboard'
+export * from './TablesPage'
+export * from './TreesPage'
+export * from './CardsPage'
+export * from './NavbarsPage'
+export * from './FormsPage'
+export * from './DialogsPage'
+export * from './StyledPage'
+export * from './ThemeColorsPage'
+export * from './TypographyPage'
+export * from './ButtonsPage'
+
