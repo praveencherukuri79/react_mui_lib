@@ -30,6 +30,7 @@ import TouchAppIcon from '@mui/icons-material/TouchApp'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
+import DataObjectIcon from '@mui/icons-material/DataObject'
 
 interface NavItem {
   label: string
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Data Tables', path: '/tables', icon: <TableChartIcon /> },
       { label: 'Tree Views', path: '/trees', icon: <AccountTreeIcon /> },
+      { label: 'JSON Editor', path: '/json-editor', icon: <DataObjectIcon /> },
     ],
   },
   {
@@ -65,8 +67,9 @@ const navItems: NavItem[] = [
   {
     label: 'Theming',
     children: [
-      { label: 'Styled Components', path: '/styled', icon: <StyleIcon /> },
+      { label: 'Theme Editor', path: '/theme-editor', icon: <ColorLensIcon /> },
       { label: 'Theme Colors', path: '/theme-colors', icon: <ColorLensIcon /> },
+      { label: 'Styled Components', path: '/styled', icon: <StyleIcon /> },
       { label: 'Typography', path: '/typography', icon: <TextFieldsIcon /> },
     ],
   },

@@ -13,6 +13,8 @@ import {
   ThemeColorsPage,
   TypographyPage,
   ButtonsPage,
+  ThemeEditorPage,
+  JsonEditorPage,
 } from '@/pages'
 
 function App() {
@@ -31,6 +33,8 @@ function App() {
           <Route path="/theme-colors" element={<ThemeColorsPage />} />
           <Route path="/typography" element={<TypographyPage />} />
           <Route path="/buttons" element={<ButtonsPage />} />
+          <Route path="/theme-editor" element={<ThemeEditorPage />} />
+          <Route path="/json-editor" element={<JsonEditorPage />} />
         </Routes>
       </TopNavLayout>
     </ThemeProvider>

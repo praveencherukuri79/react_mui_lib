@@ -9,4 +9,6 @@ export * from './StyledPage'
 export * from './ThemeColorsPage'
 export * from './TypographyPage'
 export * from './ButtonsPage'
+export * from './ThemeEditorPage'
+export * from './JsonEditorPage'
 
