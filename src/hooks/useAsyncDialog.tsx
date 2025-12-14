@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, ReactNode, ComponentType, ChangeEvent } from 'react'
+import { useState, useCallback, useRef, ReactNode, ComponentType } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -8,159 +8,141 @@ import {
   IconButton,
   Box,
   Typography,
+  TextField,
   useTheme,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 
-// ============================================
-// ASYNC DIALOG SYSTEM
-// ============================================
-// This system allows you to open any component as a dialog
-// and await its result, avoiding the need to manage
-// open/close state in multiple methods.
+// =============================================================================
+// TYPES
+// =============================================================================
 
+/** Configuration for dialog appearance and behavior */
 export interface DialogConfig {
   title?: string
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   fullWidth?: boolean
   showCloseButton?: boolean
   disableBackdropClick?: boolean
-  hideActions?: boolean
-  confirmText?: string
-  cancelText?: string
 }
 
-export interface DialogProps<T = unknown> {
+/**
+ * Props passed to dialog content components.
+ * T = return type, P = custom props passed from parent
+ * 
+ * @example
+ * // Simple dialog returning a string
+ * const MyDialog = ({ onClose, onConfirm }: DialogProps<string>) => { ... }
+ * 
+ * // Dialog with custom props
+ * const EditDialog = ({ user, onClose, onConfirm }: DialogProps<User, { user: User }>) => { ... }
+ */
+export type DialogProps<T = void, P = object> = P & {
   onClose: (result?: T) => void
   onConfirm: (result: T) => void
 }
 
-interface DialogState<T = unknown> {
-  open: boolean
-  resolve: ((value: T | undefined) => void) | null
-  component: ReactNode | null
-  config: DialogConfig
-}
+// =============================================================================
+// MAIN HOOK: useAsyncDialog
+// =============================================================================
 
-// Hook for creating async dialogs
-export function useAsyncDialog<T = unknown>() {
-  const [state, setState] = useState<DialogState<T>>({
-    open: false,
-    resolve: null,
-    component: null,
-    config: {},
-  })
-
+/**
+ * Opens any component as a dialog and returns the result as a Promise.
+ * No need to manage open/close state manually.
+ * 
+ * @example
+ * const { openDialog, DialogComponent } = useAsyncDialog<User, { user: User }>()
+ * 
+ * const handleEdit = async () => {
+ *   const result = await openDialog(
+ *     EditUserForm,
+ *     { title: 'Edit User' },
+ *     { user: currentUser }
+ *   )
+ *   if (result) saveUser(result)
+ * }
+ */
+export function useAsyncDialog<T = void, P = object>() {
+  const [open, setOpen] = useState(false)
+  const [content, setContent] = useState<ReactNode>(null)
+  const [config, setConfig] = useState<DialogConfig>({})
   const resolveRef = useRef<((value: T | undefined) => void) | null>(null)
+
+  const closeDialog = useCallback((result?: T) => {
+    resolveRef.current?.(result)
+    setOpen(false)
+  }, [])
 
   const openDialog = useCallback(
     (
-      Component: ComponentType<DialogProps<T>> | ReactNode,
-      config: DialogConfig = {}
+      Component: ComponentType<DialogProps<T, P>> | ReactNode,
+      dialogConfig: DialogConfig = {},
+      props?: P
     ): Promise<T | undefined> => {
       return new Promise((resolve) => {
         resolveRef.current = resolve
-        setState({
-          open: true,
-          resolve,
-          component:
-            typeof Component === 'function' ? (
-              <Component
-                onClose={(result?: T) => {
-                  resolve(result)
-                  setState((s: DialogState<T>) => ({ ...s, open: false }))
-                }}
-                onConfirm={(result: T) => {
-                  resolve(result)
-                  setState((s: DialogState<T>) => ({ ...s, open: false }))
-                }}
-              />
-            ) : (
-              Component
-            ),
-          config,
-        })
+        setConfig(dialogConfig)
+        setOpen(true)
+        setContent(
+          typeof Component === 'function' ? (
+            <Component
+              {...(props as P)}
+              onClose={(result?: T) => {
+                resolve(result)
+                setOpen(false)
+              }}
+              onConfirm={(result: T) => {
+                resolve(result)
+                setOpen(false)
+              }}
+            />
+          ) : (
+            Component
+          )
+        )
       })
     },
     []
   )
 
-  const closeDialog = useCallback((result?: T) => {
-    if (resolveRef.current) {
-      resolveRef.current(result)
-    }
-    setState((s: DialogState<T>) => ({ ...s, open: false }))
-  }, [])
-
   const DialogComponent = useCallback(() => {
     const theme = useTheme()
-    const {
-      title,
-      maxWidth = 'sm',
-      fullWidth = true,
-      showCloseButton = true,
-      disableBackdropClick = false,
-    } = state.config
+    const { title, maxWidth = 'sm', fullWidth = true, showCloseButton = true, disableBackdropClick } = config
 
     return (
       <Dialog
-        open={state.open}
-        onClose={(_: React.SyntheticEvent, reason: string) => {
+        open={open}
+        onClose={(_, reason) => {
           if (disableBackdropClick && reason === 'backdropClick') return
           closeDialog()
         }}
         maxWidth={maxWidth}
         fullWidth={fullWidth}
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            overflow: 'hidden',
-          },
-        }}
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
         {title && (
-          <DialogTitle
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: `1px solid ${theme.palette.divider}`,
-              pb: 2,
-            }}
-          >
-            <Typography variant="h6" component="span" fontWeight={600}>
-              {title}
-            </Typography>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${theme.palette.divider}`, pb: 2 }}>
+            <Typography variant="h6" fontWeight={600}>{title}</Typography>
             {showCloseButton && (
-              <IconButton
-                size="small"
-                onClick={() => closeDialog()}
-                sx={{ ml: 2 }}
-              >
+              <IconButton size="small" onClick={() => closeDialog()}>
                 <CloseIcon fontSize="small" />
               </IconButton>
             )}
           </DialogTitle>
         )}
-        <DialogContent sx={{ pt: title ? 3 : 2 }}>
-          {state.component}
-        </DialogContent>
+        <DialogContent sx={{ pt: title ? 3 : 2 }}>{content}</DialogContent>
       </Dialog>
     )
-  }, [state, closeDialog])
+  }, [open, content, config, closeDialog])
 
-  return {
-    openDialog,
-    closeDialog,
-    DialogComponent,
-    isOpen: state.open,
-  }
+  return { openDialog, closeDialog, DialogComponent, isOpen: open }
 }
 
-// ============================================
-// CONFIRMATION DIALOG
-// ============================================
-export interface ConfirmDialogOptions {
+// =============================================================================
+// HELPER HOOK: useConfirmDialog
+// =============================================================================
+
+export interface ConfirmOptions {
   title?: string
   message: string
   confirmText?: string
@@ -168,29 +150,39 @@ export interface ConfirmDialogOptions {
   variant?: 'danger' | 'warning' | 'info'
 }
 
+/**
+ * Simple confirmation dialog that returns true/false.
+ * 
+ * @example
+ * const { confirm, DialogComponent } = useConfirmDialog()
+ * 
+ * const handleDelete = async () => {
+ *   const confirmed = await confirm({
+ *     title: 'Delete Item',
+ *     message: 'Are you sure?',
+ *     variant: 'danger'
+ *   })
+ *   if (confirmed) deleteItem()
+ * }
+ */
 export function useConfirmDialog() {
-  const { openDialog, closeDialog, isOpen, DialogComponent } = useAsyncDialog<boolean>()
+  const { openDialog, DialogComponent, isOpen, closeDialog } = useAsyncDialog<boolean>()
 
   const confirm = useCallback(
-    async (options: ConfirmDialogOptions): Promise<boolean> => {
-      const {
-        title = 'Confirm',
-        message,
-        confirmText = 'Confirm',
-        cancelText = 'Cancel',
-        variant = 'info',
-      } = options
+    async (options: ConfirmOptions): Promise<boolean> => {
+      const { title = 'Confirm', message, confirmText = 'Confirm', cancelText = 'Cancel', variant = 'info' } = options
+
+      const buttonColor = variant === 'danger' ? 'error' : variant === 'warning' ? 'warning' : 'primary'
 
       const result = await openDialog(
-        ({ onClose, onConfirm }: DialogProps<boolean>) => (
-          <ConfirmContent
-            message={message}
-            confirmText={confirmText}
-            cancelText={cancelText}
-            variant={variant}
-            onConfirm={() => onConfirm(true)}
-            onCancel={() => onClose(false)}
-          />
+        ({ onClose, onConfirm }) => (
+          <Box>
+            <Typography sx={{ mb: 3 }}>{message}</Typography>
+            <DialogActions sx={{ px: 0, pb: 0 }}>
+              <Button variant="outlined" onClick={() => onClose(false)}>{cancelText}</Button>
+              <Button variant="contained" color={buttonColor} onClick={() => onConfirm(true)}>{confirmText}</Button>
+            </DialogActions>
+          </Box>
         ),
         { title, maxWidth: 'xs' }
       )
@@ -200,56 +192,14 @@ export function useConfirmDialog() {
     [openDialog]
   )
 
-  return { confirm, closeDialog, isOpen, DialogComponent }
+  return { confirm, DialogComponent, isOpen, closeDialog }
 }
 
-interface ConfirmContentProps {
-  message: string
-  confirmText: string
-  cancelText: string
-  variant: 'danger' | 'warning' | 'info'
-  onConfirm: () => void
-  onCancel: () => void
-}
+// =============================================================================
+// HELPER HOOK: usePromptDialog
+// =============================================================================
 
-function ConfirmContent({
-  message,
-  confirmText,
-  cancelText,
-  variant,
-  onConfirm,
-  onCancel,
-}: ConfirmContentProps) {
-  const getButtonColor = () => {
-    switch (variant) {
-      case 'danger':
-        return 'error'
-      case 'warning':
-        return 'warning'
-      default:
-        return 'primary'
-    }
-  }
-
-  return (
-    <Box>
-      <Typography sx={{ mb: 3 }}>{message}</Typography>
-      <DialogActions sx={{ px: 0, pb: 0 }}>
-        <Button variant="outlined" onClick={onCancel}>
-          {cancelText}
-        </Button>
-        <Button variant="contained" color={getButtonColor()} onClick={onConfirm}>
-          {confirmText}
-        </Button>
-      </DialogActions>
-    </Box>
-  )
-}
-
-// ============================================
-// PROMPT DIALOG
-// ============================================
-export interface PromptDialogOptions {
+export interface PromptOptions {
   title?: string
   message: string
   defaultValue?: string
@@ -258,94 +208,58 @@ export interface PromptDialogOptions {
   cancelText?: string
 }
 
+/**
+ * Prompt dialog that returns user input string.
+ * 
+ * @example
+ * const { prompt, DialogComponent } = usePromptDialog()
+ * 
+ * const handleRename = async () => {
+ *   const newName = await prompt({
+ *     title: 'Rename',
+ *     message: 'Enter new name:',
+ *     defaultValue: currentName
+ *   })
+ *   if (newName) rename(newName)
+ * }
+ */
 export function usePromptDialog() {
-  const { openDialog, closeDialog, isOpen, DialogComponent } = useAsyncDialog<string>()
+  const { openDialog, DialogComponent, isOpen, closeDialog } = useAsyncDialog<string>()
 
   const prompt = useCallback(
-    async (options: PromptDialogOptions): Promise<string | undefined> => {
-      const {
-        title = 'Enter Value',
-        message,
-        defaultValue = '',
-        placeholder = '',
-        confirmText = 'OK',
-        cancelText = 'Cancel',
-      } = options
+    async (options: PromptOptions): Promise<string | undefined> => {
+      const { title = 'Enter Value', message, defaultValue = '', placeholder = '', confirmText = 'OK', cancelText = 'Cancel' } = options
 
-      return await openDialog(
-        ({ onClose, onConfirm }: DialogProps<string>) => (
-          <PromptContent
-            message={message}
-            defaultValue={defaultValue}
-            placeholder={placeholder}
-            confirmText={confirmText}
-            cancelText={cancelText}
-            onConfirm={onConfirm}
-            onCancel={() => onClose(undefined)}
-          />
-        ),
+      return openDialog(
+        ({ onClose, onConfirm }) => {
+          // Using a wrapper to manage local state
+          const PromptContent = () => {
+            const [value, setValue] = useState(defaultValue)
+            return (
+              <Box>
+                <Typography sx={{ mb: 2 }}>{message}</Typography>
+                <TextField
+                  fullWidth
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={placeholder}
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && onConfirm(value)}
+                />
+                <DialogActions sx={{ px: 0, pb: 0, mt: 3 }}>
+                  <Button variant="outlined" onClick={() => onClose()}>{cancelText}</Button>
+                  <Button variant="contained" onClick={() => onConfirm(value)}>{confirmText}</Button>
+                </DialogActions>
+              </Box>
+            )
+          }
+          return <PromptContent />
+        },
         { title, maxWidth: 'sm' }
       )
     },
     [openDialog]
   )
 
-  return { prompt, closeDialog, isOpen, DialogComponent }
+  return { prompt, DialogComponent, isOpen, closeDialog }
 }
-
-interface PromptContentProps {
-  message: string
-  defaultValue: string
-  placeholder: string
-  confirmText: string
-  cancelText: string
-  onConfirm: (value: string) => void
-  onCancel: () => void
-}
-
-function PromptContent({
-  message,
-  defaultValue,
-  placeholder,
-  confirmText,
-  cancelText,
-  onConfirm,
-  onCancel,
-}: PromptContentProps) {
-  const [value, setValue] = useState(defaultValue)
-
-  return (
-    <Box>
-      <Typography sx={{ mb: 2 }}>{message}</Typography>
-      <Box
-        component="input"
-        value={value}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
-        placeholder={placeholder}
-        sx={{
-          width: '100%',
-          p: 1.5,
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          fontSize: '1rem',
-          outline: 'none',
-          bgcolor: 'background.paper',
-          color: 'text.primary',
-          '&:focus': {
-            borderColor: 'primary.main',
-          },
-        }}
-      />
-      <DialogActions sx={{ px: 0, pb: 0, mt: 3 }}>
-        <Button variant="outlined" onClick={onCancel}>
-          {cancelText}
-        </Button>
-        <Button variant="contained" onClick={() => onConfirm(value)}>
-          {confirmText}
-        </Button>
-      </DialogActions>
-    </Box>
-  )
-}
-

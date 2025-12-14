@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, ReactNode } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   TextField,
   Select,
@@ -24,23 +24,14 @@ import { Visibility, VisibilityOff } from '@mui/icons-material'
 import { z, ZodSchema } from 'zod'
 import dayjs, { Dayjs } from 'dayjs'
 
-// ============================================
-// FORM CONTROL TYPES
-// ============================================
+// =============================================================================
+// TYPES
+// =============================================================================
+
 export type FieldType =
-  | 'text'
-  | 'email'
-  | 'password'
-  | 'number'
-  | 'textarea'
-  | 'select'
-  | 'multiselect'
-  | 'checkbox'
-  | 'switch'
-  | 'radio'
-  | 'slider'
-  | 'date'
-  | 'autocomplete'
+  | 'text' | 'email' | 'password' | 'number' | 'textarea'
+  | 'select' | 'multiselect' | 'checkbox' | 'switch' | 'radio'
+  | 'slider' | 'date' | 'autocomplete'
 
 export interface SelectOption {
   value: string | number
@@ -48,7 +39,9 @@ export interface SelectOption {
   disabled?: boolean
 }
 
-export interface FieldConfig<T = unknown> {
+// Using 'any' for value type to keep the API simple
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface FieldConfig<T = any> {
   name: string
   type: FieldType
   label: string
@@ -57,39 +50,36 @@ export interface FieldConfig<T = unknown> {
   required?: boolean
   disabled?: boolean
   helperText?: string
-  
+  fullWidth?: boolean
+  size?: 'small' | 'medium'
+
   // Validation
-  schema?: ZodSchema<T>
-  
-  // Select/Radio options
+  schema?: ZodSchema
+
+  // Options for select/radio/autocomplete
   options?: SelectOption[]
-  
-  // Slider config
+
+  // Slider
   min?: number
   max?: number
   step?: number
   marks?: boolean | { value: number; label: string }[]
-  
-  // Textarea config
+
+  // Textarea
   rows?: number
   maxRows?: number
-  
-  // Autocomplete config
+
+  // Autocomplete
   freeSolo?: boolean
   multiple?: boolean
-  
-  // Custom rendering
-  startAdornment?: ReactNode
-  endAdornment?: ReactNode
-  
-  // Full width
-  fullWidth?: boolean
-  
-  // Size
-  size?: 'small' | 'medium'
+
+  // Adornments
+  startAdornment?: React.ReactNode
+  endAdornment?: React.ReactNode
 }
 
-export interface FormControlProps<T = unknown> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface FormControlProps<T = any> {
   config: FieldConfig<T>
   value?: T
   onChange?: (value: T, isValid: boolean) => void
@@ -98,10 +88,12 @@ export interface FormControlProps<T = unknown> {
   touched?: boolean
 }
 
-// ============================================
-// FORM CONTROL COMPONENT
-// ============================================
-export function FormControl<T = unknown>({
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function FormControl<T = any>({
   config,
   value,
   onChange,
@@ -109,101 +101,82 @@ export function FormControl<T = unknown>({
   error: externalError,
   touched = false,
 }: FormControlProps<T>) {
-  const [internalValue, setInternalValue] = useState<T | undefined>(
-    value ?? config.defaultValue
-  )
-  const [internalError, setInternalError] = useState<string>('')
+  const [internalValue, setInternalValue] = useState<T | undefined>(value ?? config.defaultValue)
+  const [internalError, setInternalError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isTouched, setIsTouched] = useState(touched)
 
-  const currentValue = value !== undefined ? value : internalValue
+  const currentValue = value ?? internalValue
   const currentError = externalError ?? (isTouched ? internalError : '')
 
-  // Validate value against schema
-  const validate = useCallback(
-    (val: T): boolean => {
-      if (!config.schema) return true
-
-      try {
-        config.schema.parse(val)
-        setInternalError('')
-        return true
-      } catch (e) {
-        if (e instanceof z.ZodError) {
-          setInternalError(e.errors[0]?.message || 'Invalid value')
-        }
-        return false
+  // Validate against Zod schema
+  const validate = useCallback((val: T): boolean => {
+    if (!config.schema) return true
+    try {
+      config.schema.parse(val)
+      setInternalError('')
+      return true
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        setInternalError(e.errors[0]?.message || 'Invalid value')
       }
-    },
-    [config.schema]
-  )
+      return false
+    }
+  }, [config.schema])
 
-  // Handle value change
-  const handleChange = useCallback(
-    (newValue: T) => {
-      setInternalValue(newValue)
-      const isValid = validate(newValue)
-      onChange?.(newValue, isValid)
-    },
-    [onChange, validate]
-  )
+  const handleChange = useCallback((newValue: T) => {
+    setInternalValue(newValue)
+    const isValid = validate(newValue)
+    onChange?.(newValue, isValid)
+  }, [onChange, validate])
 
-  // Handle blur
   const handleBlur = useCallback(() => {
     setIsTouched(true)
-    if (currentValue !== undefined) {
-      validate(currentValue as T)
-    }
+    if (currentValue !== undefined) validate(currentValue)
     onBlur?.()
   }, [currentValue, validate, onBlur])
 
-  // Sync external value
   useEffect(() => {
-    if (value !== undefined) {
-      setInternalValue(value)
-    }
+    if (value !== undefined) setInternalValue(value)
   }, [value])
 
-  const commonProps = {
+  // Common props for most inputs
+  const baseProps = {
     fullWidth: config.fullWidth ?? true,
-    size: config.size ?? 'medium' as const,
+    size: config.size ?? ('medium' as const),
     disabled: config.disabled,
     error: !!currentError,
     onBlur: handleBlur,
   }
 
-  // Render based on field type
+  const helperText = currentError || config.helperText
+
+  // =========================================================================
+  // RENDER BY TYPE
+  // =========================================================================
+
   switch (config.type) {
+    // -----------------------------------------------------------------------
+    // Text inputs
+    // -----------------------------------------------------------------------
     case 'text':
     case 'email':
     case 'number':
       return (
         <TextField
-          {...commonProps}
+          {...baseProps}
           type={config.type}
           label={config.label}
           placeholder={config.placeholder}
           value={currentValue ?? ''}
-          onChange={(e) =>
-            handleChange(
-              (config.type === 'number'
-                ? Number(e.target.value)
-                : e.target.value) as T
-            )
-          }
-          helperText={currentError || config.helperText}
+          onChange={(e) => handleChange((config.type === 'number' ? Number(e.target.value) : e.target.value) as T)}
+          helperText={helperText}
           required={config.required}
-          InputProps={{
-            startAdornment: config.startAdornment ? (
-              <InputAdornment position="start">
-                {config.startAdornment}
-              </InputAdornment>
-            ) : undefined,
-            endAdornment: config.endAdornment ? (
-              <InputAdornment position="end">
-                {config.endAdornment}
-              </InputAdornment>
-            ) : undefined,
+          slotProps={{
+            input: {
+              startAdornment: config.startAdornment && <InputAdornment position="start">{config.startAdornment}</InputAdornment>,
+              endAdornment: config.endAdornment && <InputAdornment position="end">{config.endAdornment}</InputAdornment>,
+            },
           }}
         />
       )
@@ -211,26 +184,24 @@ export function FormControl<T = unknown>({
     case 'password':
       return (
         <TextField
-          {...commonProps}
+          {...baseProps}
           type={showPassword ? 'text' : 'password'}
           label={config.label}
           placeholder={config.placeholder}
           value={currentValue ?? ''}
           onChange={(e) => handleChange(e.target.value as T)}
-          helperText={currentError || config.helperText}
+          helperText={helperText}
           required={config.required}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowPassword(!showPassword)}
-                  edge="end"
-                  size="small"
-                >
-                  {showPassword ? <VisibilityOff /> : <Visibility />}
-                </IconButton>
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
           }}
         />
       )
@@ -238,7 +209,7 @@ export function FormControl<T = unknown>({
     case 'textarea':
       return (
         <TextField
-          {...commonProps}
+          {...baseProps}
           multiline
           rows={config.rows ?? 4}
           maxRows={config.maxRows}
@@ -246,84 +217,46 @@ export function FormControl<T = unknown>({
           placeholder={config.placeholder}
           value={currentValue ?? ''}
           onChange={(e) => handleChange(e.target.value as T)}
-          helperText={currentError || config.helperText}
+          helperText={helperText}
           required={config.required}
         />
       )
 
+    // -----------------------------------------------------------------------
+    // Select inputs
+    // -----------------------------------------------------------------------
     case 'select':
-      return (
-        <MuiFormControl {...commonProps} required={config.required}>
-          <InputLabel>{config.label}</InputLabel>
-          <Select
-            value={currentValue ?? ''}
-            label={config.label}
-            onChange={(e) => handleChange(e.target.value as T)}
-          >
-            {config.options?.map((option) => (
-              <MenuItem
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled}
-              >
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-          {(currentError || config.helperText) && (
-            <FormHelperText error={!!currentError}>
-              {currentError || config.helperText}
-            </FormHelperText>
-          )}
-        </MuiFormControl>
-      )
-
     case 'multiselect':
       return (
-        <MuiFormControl {...commonProps} required={config.required}>
+        <MuiFormControl {...baseProps} required={config.required}>
           <InputLabel>{config.label}</InputLabel>
           <Select
-            multiple
-            value={(currentValue as string[]) ?? []}
+            multiple={config.type === 'multiselect'}
+            value={currentValue ?? (config.type === 'multiselect' ? [] : '')}
             label={config.label}
             onChange={(e) => handleChange(e.target.value as T)}
           >
-            {config.options?.map((option) => (
-              <MenuItem
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled}
-              >
-                {option.label}
+            {config.options?.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                {opt.label}
               </MenuItem>
             ))}
           </Select>
-          {(currentError || config.helperText) && (
-            <FormHelperText error={!!currentError}>
-              {currentError || config.helperText}
-            </FormHelperText>
-          )}
+          {helperText && <FormHelperText error={!!currentError}>{helperText}</FormHelperText>}
         </MuiFormControl>
       )
 
+    // -----------------------------------------------------------------------
+    // Toggle inputs
+    // -----------------------------------------------------------------------
     case 'checkbox':
       return (
         <Box>
           <FormControlLabel
-            control={
-              <Checkbox
-                checked={!!currentValue}
-                onChange={(e) => handleChange(e.target.checked as T)}
-                disabled={config.disabled}
-              />
-            }
+            control={<Checkbox checked={!!currentValue} onChange={(e) => handleChange(e.target.checked as T)} disabled={config.disabled} />}
             label={config.label}
           />
-          {(currentError || config.helperText) && (
-            <FormHelperText error={!!currentError}>
-              {currentError || config.helperText}
-            </FormHelperText>
-          )}
+          {helperText && <FormHelperText error={!!currentError}>{helperText}</FormHelperText>}
         </Box>
       )
 
@@ -331,51 +264,29 @@ export function FormControl<T = unknown>({
       return (
         <Box>
           <FormControlLabel
-            control={
-              <Switch
-                checked={!!currentValue}
-                onChange={(e) => handleChange(e.target.checked as T)}
-                disabled={config.disabled}
-              />
-            }
+            control={<Switch checked={!!currentValue} onChange={(e) => handleChange(e.target.checked as T)} disabled={config.disabled} />}
             label={config.label}
           />
-          {(currentError || config.helperText) && (
-            <FormHelperText error={!!currentError}>
-              {currentError || config.helperText}
-            </FormHelperText>
-          )}
+          {helperText && <FormHelperText error={!!currentError}>{helperText}</FormHelperText>}
         </Box>
       )
 
     case 'radio':
       return (
-        <MuiFormControl {...commonProps} required={config.required}>
-          <Box component="legend" sx={{ mb: 1, fontWeight: 500 }}>
-            {config.label}
-          </Box>
-          <RadioGroup
-            value={currentValue ?? ''}
-            onChange={(e) => handleChange(e.target.value as T)}
-          >
-            {config.options?.map((option) => (
-              <FormControlLabel
-                key={option.value}
-                value={option.value}
-                control={<Radio />}
-                label={option.label}
-                disabled={option.disabled || config.disabled}
-              />
+        <MuiFormControl {...baseProps} required={config.required}>
+          <Box component="legend" sx={{ mb: 1, fontWeight: 500 }}>{config.label}</Box>
+          <RadioGroup value={currentValue ?? ''} onChange={(e) => handleChange(e.target.value as T)}>
+            {config.options?.map((opt) => (
+              <FormControlLabel key={opt.value} value={opt.value} control={<Radio />} label={opt.label} disabled={opt.disabled || config.disabled} />
             ))}
           </RadioGroup>
-          {(currentError || config.helperText) && (
-            <FormHelperText error={!!currentError}>
-              {currentError || config.helperText}
-            </FormHelperText>
-          )}
+          {helperText && <FormHelperText error={!!currentError}>{helperText}</FormHelperText>}
         </MuiFormControl>
       )
 
+    // -----------------------------------------------------------------------
+    // Slider
+    // -----------------------------------------------------------------------
     case 'slider':
       return (
         <Box sx={{ px: 1 }}>
@@ -384,7 +295,7 @@ export function FormControl<T = unknown>({
           </Box>
           <Slider
             value={(currentValue as number) ?? config.min ?? 0}
-            onChange={(_, newValue) => handleChange(newValue as T)}
+            onChange={(_, val) => handleChange(val as T)}
             min={config.min ?? 0}
             max={config.max ?? 100}
             step={config.step ?? 1}
@@ -392,56 +303,43 @@ export function FormControl<T = unknown>({
             disabled={config.disabled}
             valueLabelDisplay="auto"
           />
-          {(currentError || config.helperText) && (
-            <FormHelperText error={!!currentError}>
-              {currentError || config.helperText}
-            </FormHelperText>
-          )}
+          {helperText && <FormHelperText error={!!currentError}>{helperText}</FormHelperText>}
         </Box>
       )
 
+    // -----------------------------------------------------------------------
+    // Date picker
+    // -----------------------------------------------------------------------
     case 'date':
       return (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DatePicker
             label={config.label}
             value={currentValue ? dayjs(currentValue as string) : null}
-            onChange={(newValue: Dayjs | null) =>
-              handleChange((newValue?.toISOString() ?? '') as T)
-            }
+            onChange={(val: Dayjs | null) => handleChange((val?.toISOString() ?? '') as T)}
             disabled={config.disabled}
             slotProps={{
-              textField: {
-                ...commonProps,
-                helperText: currentError || config.helperText,
-                required: config.required,
-              },
+              textField: { ...baseProps, helperText, required: config.required },
             }}
           />
         </LocalizationProvider>
       )
 
+    // -----------------------------------------------------------------------
+    // Autocomplete
+    // -----------------------------------------------------------------------
     case 'autocomplete':
       return (
         <Autocomplete
-          {...commonProps}
+          {...baseProps}
           options={config.options ?? []}
-          getOptionLabel={(option) =>
-            typeof option === 'string' ? option : (option as SelectOption).label
-          }
+          getOptionLabel={(opt) => (typeof opt === 'string' ? opt : (opt as SelectOption).label)}
           value={(currentValue as SelectOption | string | null) ?? null}
-          onChange={(_, newValue) => handleChange(newValue as T)}
+          onChange={(_, val) => handleChange(val as T)}
           freeSolo={config.freeSolo}
           multiple={config.multiple}
           renderInput={(params) => (
-            <TextField
-              {...params}
-              label={config.label}
-              placeholder={config.placeholder}
-              error={!!currentError}
-              helperText={currentError || config.helperText}
-              required={config.required}
-            />
+            <TextField {...params} label={config.label} placeholder={config.placeholder} error={!!currentError} helperText={helperText} required={config.required} />
           )}
         />
       )
@@ -451,22 +349,20 @@ export function FormControl<T = unknown>({
   }
 }
 
-// ============================================
+// =============================================================================
 // PRE-BUILT VALIDATION SCHEMAS
-// ============================================
-export const ValidationSchemas = {
-  email: z.string().email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
-  required: z.string().min(1, 'This field is required'),
-  phone: z.string().regex(/^\+?[\d\s-()]+$/, 'Please enter a valid phone number'),
-  url: z.string().url('Please enter a valid URL'),
-  number: z.number().finite('Please enter a valid number'),
-  positiveNumber: z.number().positive('Please enter a positive number'),
-  date: z.string().datetime('Please enter a valid date'),
-}
+// =============================================================================
 
+export const ValidationSchemas = {
+  email: z.string().email('Please enter a valid email'),
+  password: z.string()
+    .min(8, 'Min 8 characters')
+    .regex(/[A-Z]/, 'Need uppercase')
+    .regex(/[a-z]/, 'Need lowercase')
+    .regex(/[0-9]/, 'Need number'),
+  required: z.string().min(1, 'Required'),
+  phone: z.string().regex(/^\+?[\d\s-()]+$/, 'Invalid phone'),
+  url: z.string().url('Invalid URL'),
+  number: z.number().finite('Invalid number'),
+  positiveNumber: z.number().positive('Must be positive'),
+}
