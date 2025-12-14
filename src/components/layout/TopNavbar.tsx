@@ -1,4 +1,4 @@
-import { useState, MouseEvent } from 'react'
+import { useState, MouseEvent } from "react";
 import {
   AppBar,
   Toolbar,
@@ -13,88 +13,100 @@ import {
   useTheme,
   ListItemIcon,
   ListItemText,
-} from '@mui/material'
-import { useNavigate } from 'react-router-dom'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import DashboardIcon from '@mui/icons-material/Dashboard'
-import TableChartIcon from '@mui/icons-material/TableChart'
-import AccountTreeIcon from '@mui/icons-material/AccountTree'
-import ViewCarouselIcon from '@mui/icons-material/ViewCarousel'
-import NavigationIcon from '@mui/icons-material/Navigation'
-import DynamicFormIcon from '@mui/icons-material/DynamicForm'
-import ChatIcon from '@mui/icons-material/Chat'
-import StyleIcon from '@mui/icons-material/Style'
-import ColorLensIcon from '@mui/icons-material/ColorLens'
-import TextFieldsIcon from '@mui/icons-material/TextFields'
-import TouchAppIcon from '@mui/icons-material/TouchApp'
-import NotificationsIcon from '@mui/icons-material/Notifications'
-import SettingsIcon from '@mui/icons-material/Settings'
-import LogoutIcon from '@mui/icons-material/Logout'
-import DataObjectIcon from '@mui/icons-material/DataObject'
+} from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import SettingsIcon from "@mui/icons-material/Settings";
+import LogoutIcon from "@mui/icons-material/Logout";
 
-interface NavItem {
-  label: string
-  path?: string
-  icon?: React.ReactNode
-  children?: { label: string; path: string; icon?: React.ReactNode }[]
-}
+// Icons for dynamic rendering
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import TableChartIcon from "@mui/icons-material/TableChart";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import DataObjectIcon from "@mui/icons-material/DataObject";
+import ViewCarouselIcon from "@mui/icons-material/ViewCarousel";
+import NavigationIcon from "@mui/icons-material/Navigation";
+import TouchAppIcon from "@mui/icons-material/TouchApp";
+import WidgetsIcon from "@mui/icons-material/Widgets";
+import DynamicFormIcon from "@mui/icons-material/DynamicForm";
+import ChatIcon from "@mui/icons-material/Chat";
+import ColorLensIcon from "@mui/icons-material/ColorLens";
+import StyleIcon from "@mui/icons-material/Style";
+import TextFieldsIcon from "@mui/icons-material/TextFields";
+import EditIcon from "@mui/icons-material/Edit";
+import CodeIcon from "@mui/icons-material/Code";
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
-  {
-    label: 'Data',
-    children: [
-      { label: 'Data Tables', path: '/tables', icon: <TableChartIcon /> },
-      { label: 'Tree Views', path: '/trees', icon: <AccountTreeIcon /> },
-      { label: 'JSON Editor', path: '/json-editor', icon: <DataObjectIcon /> },
-    ],
-  },
-  {
-    label: 'UI Elements',
-    children: [
-      { label: 'Cards', path: '/cards', icon: <ViewCarouselIcon /> },
-      { label: 'Navbars', path: '/navbars', icon: <NavigationIcon /> },
-      { label: 'Buttons', path: '/buttons', icon: <TouchAppIcon /> },
-    ],
-  },
-  {
-    label: 'Forms & Dialogs',
-    children: [
-      { label: 'Forms', path: '/forms', icon: <DynamicFormIcon /> },
-      { label: 'Dialogs', path: '/dialogs', icon: <ChatIcon /> },
-    ],
-  },
-  {
-    label: 'Theming',
-    children: [
-      { label: 'Theme Editor', path: '/theme-editor', icon: <ColorLensIcon /> },
-      { label: 'Theme Colors', path: '/theme-colors', icon: <ColorLensIcon /> },
-      { label: 'Styled Components', path: '/styled', icon: <StyleIcon /> },
-      { label: 'Typography', path: '/typography', icon: <TextFieldsIcon /> },
-    ],
-  },
-]
+import { navigationConfig, ModuleConfig } from "@/config/navigation";
+
+// =============================================================================
+// ICON COMPONENT MAP
+// =============================================================================
+
+const iconComponents: Record<string, React.ReactNode> = {
+  dashboard: <DashboardIcon fontSize="small" />,
+  table: <TableChartIcon fontSize="small" />,
+  tree: <AccountTreeIcon fontSize="small" />,
+  data: <DataObjectIcon fontSize="small" />,
+  card: <ViewCarouselIcon fontSize="small" />,
+  nav: <NavigationIcon fontSize="small" />,
+  button: <TouchAppIcon fontSize="small" />,
+  widgets: <WidgetsIcon fontSize="small" />,
+  form: <DynamicFormIcon fontSize="small" />,
+  dialog: <ChatIcon fontSize="small" />,
+  palette: <ColorLensIcon fontSize="small" />,
+  style: <StyleIcon fontSize="small" />,
+  typography: <TextFieldsIcon fontSize="small" />,
+  edit: <EditIcon fontSize="small" />,
+  json: <CodeIcon fontSize="small" />,
+};
+
+const getIcon = (iconName?: string): React.ReactNode => {
+  if (!iconName) return null;
+  return iconComponents[iconName] || null;
+};
+
+// =============================================================================
+// TOP NAVBAR COMPONENT
+// =============================================================================
 
 export const TopNavbar = () => {
-  const theme = useTheme()
-  const navigate = useNavigate()
-  const [anchorEls, setAnchorEls] = useState<{ [key: string]: HTMLElement | null }>({})
-  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null)
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Menu anchors for dropdowns
+  const [anchorEls, setAnchorEls] = useState<Record<string, HTMLElement | null>>({});
+  const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
 
   const handleMenuOpen = (event: MouseEvent<HTMLElement>, menuId: string) => {
-    setAnchorEls((prev) => ({ ...prev, [menuId]: event.currentTarget }))
-  }
+    setAnchorEls((prev) => ({ ...prev, [menuId]: event.currentTarget }));
+  };
 
   const handleMenuClose = (menuId: string) => {
-    setAnchorEls((prev) => ({ ...prev, [menuId]: null }))
-  }
+    setAnchorEls((prev) => ({ ...prev, [menuId]: null }));
+  };
 
   const handleNavigation = (path: string, menuId?: string) => {
-    navigate(path)
+    navigate(path);
     if (menuId) {
-      handleMenuClose(menuId)
+      handleMenuClose(menuId);
     }
-  }
+  };
+
+  const isActiveModule = (module: ModuleConfig): boolean => {
+    if (module.path) {
+      return location.pathname === module.path;
+    }
+    if (module.features) {
+      return module.features.some((f) => location.pathname === f.path);
+    }
+    return false;
+  };
+
+  const isActiveFeature = (path: string): boolean => {
+    return location.pathname === path;
+  };
 
   return (
     <AppBar
@@ -102,20 +114,20 @@ export const TopNavbar = () => {
       sx={{
         background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
         borderBottom: `1px solid ${theme.palette.divider}`,
-        boxShadow: `0 2px 20px rgba(0, 0, 0, 0.1)`,
+        boxShadow: "0 2px 20px rgba(0, 0, 0, 0.1)",
       }}
     >
       <Toolbar sx={{ px: { xs: 2, md: 4 } }}>
         {/* Logo */}
         <Box
           sx={{
-            display: 'flex',
-            alignItems: 'center',
+            display: "flex",
+            alignItems: "center",
             gap: 1.5,
             mr: 4,
-            cursor: 'pointer',
+            cursor: "pointer",
           }}
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
         >
           <Box
             sx={{
@@ -123,12 +135,12 @@ export const TopNavbar = () => {
               height: 40,
               borderRadius: 2,
               background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
               fontWeight: 700,
-              fontSize: '1.1rem',
+              fontSize: "1.1rem",
             }}
           >
             R
@@ -137,90 +149,103 @@ export const TopNavbar = () => {
             variant="h6"
             fontWeight={700}
             sx={{
-              display: { xs: 'none', sm: 'block' },
+              display: { xs: "none", sm: "block" },
               background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
             }}
           >
             React MUI
           </Typography>
         </Box>
 
-        {/* Navigation Items */}
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5, flex: 1 }}>
-          {navItems.map((item) => {
-            const hasChildren = item.children && item.children.length > 0
-            const isOpen = Boolean(anchorEls[item.label])
+        {/* Navigation Items from Config */}
+        <Box sx={{ display: { xs: "none", md: "flex" }, gap: 0.5, flex: 1 }}>
+          {navigationConfig.modules.map((module) => {
+            const hasFeatures = module.features && module.features.length > 0;
+            const isOpen = Boolean(anchorEls[module.id]);
+            const isActive = isActiveModule(module);
 
             return (
-              <Box key={item.label}>
+              <Box key={module.id}>
                 <Button
                   onClick={(e) => {
-                    if (hasChildren) {
-                      handleMenuOpen(e, item.label)
-                    } else if (item.path) {
-                      handleNavigation(item.path)
+                    if (hasFeatures) {
+                      handleMenuOpen(e, module.id);
+                    } else if (module.path) {
+                      handleNavigation(module.path);
                     }
                   }}
-                  endIcon={hasChildren ? <KeyboardArrowDownIcon /> : undefined}
+                  endIcon={hasFeatures ? <KeyboardArrowDownIcon /> : undefined}
+                  startIcon={getIcon(module.icon)}
                   sx={{
-                    color: theme.palette.text.primary,
-                    fontWeight: 500,
+                    color: isActive
+                      ? theme.palette.primary.main
+                      : theme.palette.text.primary,
+                    fontWeight: isActive ? 600 : 500,
                     px: 2,
                     py: 1,
                     borderRadius: 2,
-                    textTransform: 'none',
-                    '&:hover': {
-                      bgcolor: `${theme.palette.primary.main}10`,
+                    textTransform: "none",
+                    bgcolor: isActive ? `${theme.palette.primary.main}10` : "transparent",
+                    "&:hover": {
+                      bgcolor: `${theme.palette.primary.main}15`,
                     },
                   }}
                 >
-                  {item.label}
+                  {module.label}
                 </Button>
 
-                {hasChildren && (
+                {/* Features Dropdown - No pages shown here */}
+                {hasFeatures && (
                   <Menu
-                    anchorEl={anchorEls[item.label]}
+                    anchorEl={anchorEls[module.id]}
                     open={isOpen}
-                    onClose={() => handleMenuClose(item.label)}
-                    MenuListProps={{
-                      sx: { py: 1 },
-                    }}
-                    PaperProps={{
-                      sx: {
-                        mt: 1,
-                        minWidth: 200,
-                        borderRadius: 2,
-                        boxShadow: `0 8px 32px ${theme.palette.primary.main}20`,
-                        border: `1px solid ${theme.palette.divider}`,
+                    onClose={() => handleMenuClose(module.id)}
+                    slotProps={{
+                      list: { sx: { py: 1 } },
+                      paper: {
+                        sx: {
+                          mt: 1,
+                          minWidth: 220,
+                          borderRadius: 2,
+                          boxShadow: `0 8px 32px ${theme.palette.primary.main}20`,
+                          border: `1px solid ${theme.palette.divider}`,
+                        },
                       },
                     }}
-                    transformOrigin={{ horizontal: 'left', vertical: 'top' }}
-                    anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+                    transformOrigin={{ horizontal: "left", vertical: "top" }}
+                    anchorOrigin={{ horizontal: "left", vertical: "bottom" }}
                   >
-                    {item.children?.map((child) => (
+                    {module.features?.map((feature) => (
                       <MenuItem
-                        key={child.path}
-                        onClick={() => handleNavigation(child.path, item.label)}
+                        key={feature.id}
+                        onClick={() => handleNavigation(feature.path, module.id)}
+                        selected={isActiveFeature(feature.path)}
                         sx={{
                           py: 1.5,
                           px: 2,
                           borderRadius: 1,
                           mx: 1,
-                          '&:hover': {
+                          "&:hover": {
                             bgcolor: `${theme.palette.primary.main}10`,
+                          },
+                          "&.Mui-selected": {
+                            bgcolor: `${theme.palette.primary.main}15`,
+                            "&:hover": {
+                              bgcolor: `${theme.palette.primary.main}20`,
+                            },
                           },
                         }}
                       >
-                        {child.icon && (
+                        {feature.icon && (
                           <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-                            {child.icon}
+                            {getIcon(feature.icon)}
                           </ListItemIcon>
                         )}
                         <ListItemText
-                          primary={child.label}
+                          primary={feature.label}
                           primaryTypographyProps={{ fontWeight: 500 }}
                         />
                       </MenuItem>
@@ -228,16 +253,16 @@ export const TopNavbar = () => {
                   </Menu>
                 )}
               </Box>
-            )
+            );
           })}
         </Box>
 
         {/* Right Side Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton
             sx={{
               color: theme.palette.text.secondary,
-              '&:hover': { bgcolor: `${theme.palette.primary.main}10` },
+              "&:hover": { bgcolor: `${theme.palette.primary.main}10` },
             }}
           >
             <NotificationsIcon />
@@ -245,7 +270,7 @@ export const TopNavbar = () => {
           <IconButton
             sx={{
               color: theme.palette.text.secondary,
-              '&:hover': { bgcolor: `${theme.palette.primary.main}10` },
+              "&:hover": { bgcolor: `${theme.palette.primary.main}10` },
             }}
           >
             <SettingsIcon />
@@ -256,23 +281,26 @@ export const TopNavbar = () => {
                 width: 36,
                 height: 36,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                fontSize: '0.9rem',
+                fontSize: "0.9rem",
               }}
             >
               JD
             </Avatar>
           </IconButton>
 
+          {/* User Menu */}
           <Menu
             anchorEl={userMenuAnchor}
             open={Boolean(userMenuAnchor)}
             onClose={() => setUserMenuAnchor(null)}
-            PaperProps={{
-              sx: {
-                minWidth: 200,
-                mt: 1,
-                borderRadius: 2,
-                boxShadow: `0 8px 32px ${theme.palette.primary.main}20`,
+            slotProps={{
+              paper: {
+                sx: {
+                  minWidth: 200,
+                  mt: 1,
+                  borderRadius: 2,
+                  boxShadow: `0 8px 32px ${theme.palette.primary.main}20`,
+                },
               },
             }}
           >
@@ -288,8 +316,8 @@ export const TopNavbar = () => {
             <MenuItem sx={{ py: 1.5 }}>Profile</MenuItem>
             <MenuItem sx={{ py: 1.5 }}>Settings</MenuItem>
             <Divider />
-            <MenuItem sx={{ py: 1.5, color: 'error.main' }}>
-              <ListItemIcon sx={{ color: 'error.main' }}>
+            <MenuItem sx={{ py: 1.5, color: "error.main" }}>
+              <ListItemIcon sx={{ color: "error.main" }}>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
               Logout
@@ -298,6 +326,5 @@ export const TopNavbar = () => {
         </Box>
       </Toolbar>
     </AppBar>
-  )
-}
-
+  );
+};

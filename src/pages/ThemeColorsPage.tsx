@@ -1,5 +1,5 @@
 import { Box, Typography, Paper, useTheme } from '@mui/material'
-import Grid from '@mui/material/Grid2'
+import Grid from '@mui/material/Grid'
 
 export const ThemeColorsPage = () => {
   const theme = useTheme()

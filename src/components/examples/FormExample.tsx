@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Box, Typography, Button, Paper, Alert } from '@mui/material'
-import Grid from '@mui/material/Grid2'
+import Grid from '@mui/material/Grid'
 import { z } from 'zod'
 import { FormControl, ValidationSchemas, FieldConfig } from '../form/FormControl'
 import { useForm } from '@/hooks/useForm'

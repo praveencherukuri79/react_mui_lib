@@ -14,7 +14,7 @@ import {
   Tooltip,
   Collapse,
 } from "@mui/material";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import AddIcon from "@mui/icons-material/Add";

@@ -15,6 +15,7 @@ import {
   ButtonsPage,
   ThemeEditorPage,
   JsonEditorPage,
+  MoreComponentsPage,
 } from '@/pages'
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
           <Route path="/buttons" element={<ButtonsPage />} />
           <Route path="/theme-editor" element={<ThemeEditorPage />} />
           <Route path="/json-editor" element={<JsonEditorPage />} />
+          <Route path="/more-components" element={<MoreComponentsPage />} />
         </Routes>
       </TopNavLayout>
     </ThemeProvider>

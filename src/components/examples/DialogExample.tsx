@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Box, Typography, Button, Paper, Alert, TextField, useTheme } from '@mui/material'
-import Grid from '@mui/material/Grid2'
+import Grid from '@mui/material/Grid'
 import { useAsyncDialog, useConfirmDialog, usePromptDialog, DialogProps } from '@/hooks/useAsyncDialog'
 
 // =============================================================================
