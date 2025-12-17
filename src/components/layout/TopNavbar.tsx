@@ -3,7 +3,6 @@ import {
   AppBar,
   Toolbar,
   Typography,
-  Button,
   Box,
   Menu,
   MenuItem,
@@ -38,6 +37,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import CodeIcon from "@mui/icons-material/Code";
 
 import { navigationConfig, ModuleConfig } from "@/config/navigation";
+import { UnderlineButton } from "@/components/styled";
 
 // =============================================================================
 // ICON COMPONENT MAP
@@ -94,18 +94,23 @@ export const TopNavbar = () => {
     }
   };
 
+  const pathIsActive = (basePath?: string): boolean => {
+    if (!basePath) return false;
+    return location.pathname === basePath || location.pathname.startsWith(`${basePath}/`);
+  };
+
   const isActiveModule = (module: ModuleConfig): boolean => {
     if (module.path) {
-      return location.pathname === module.path;
+      return pathIsActive(module.path);
     }
     if (module.features) {
-      return module.features.some((f) => location.pathname === f.path);
+      return module.features.some((f) => pathIsActive(f.path));
     }
     return false;
   };
 
   const isActiveFeature = (path: string): boolean => {
-    return location.pathname === path;
+    return pathIsActive(path);
   };
 
   return (
@@ -169,7 +174,8 @@ export const TopNavbar = () => {
 
             return (
               <Box key={module.id}>
-                <Button
+                <UnderlineButton
+                  active={isActive}
                   onClick={(e) => {
                     if (hasFeatures) {
                       handleMenuOpen(e, module.id);
@@ -195,7 +201,7 @@ export const TopNavbar = () => {
                   }}
                 >
                   {module.label}
-                </Button>
+                </UnderlineButton>
 
                 {/* Features Dropdown - No pages shown here */}
                 {hasFeatures && (
